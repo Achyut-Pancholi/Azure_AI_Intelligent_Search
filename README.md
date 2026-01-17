@@ -30,22 +30,19 @@ Retrieval: A decoupled HTML/JS Frontend queries the index via REST API.
 
 📂 Repository Structure
 
+```
 TCS_Industry_Project/
-│
-├── app/                        # Frontend Application
-│   └── index.html              # The Search Portal Interface
-│
-├── custom_skill/               # Backend ML Logic (Azure Function)
-│   ├── function_app.py         # Python Classification Logic
-│   ├── requirements.txt        # Dependencies
-│   └── host.json               # Function Configuration
-│
-├── docs/                       # Project Documentation
-│   ├── Project_Report.md       # Full Industry Report
-│   ├── Test_Documentation.md   # Test Cases & Scenarios
-│   └── architecture.png        # Architecture Diagram
-│
-└── README.md                   # Project Documentation
+├── app/
+│   └── index.html                    # Search Portal Interface
+├── custom_skill/                     # Backend ML Logic (Azure Function)
+│   ├── function_app.py               # Python Classification Logic
+│   ├── requirements.txt              # Dependencies
+│   └── host.json                     # Function Configuration
+├── docs/
+│   ├── Test_Documentation.md         # Test Cases & Scenarios
+│   └── Achyut TCS Report.docx        # Industry Report
+└── README.md                         # Project Documentation
+```
 
 
 🚀 Getting Started
@@ -103,13 +100,11 @@ Input: Raw text from PDF.
 
 Logic:
 
-If text contains "urgent" OR "deadline" $\rightarrow$ Tag as High-Priority.
+- If text contains "urgent" OR "deadline" → Tag as **High-Priority**
+- If text contains "archive" → Tag as **Archived**
+- Otherwise → Tag as **Standard**
 
-If text contains "archive" $\rightarrow$ Tag as Archived.
-
-Else $\rightarrow$ Tag as Standard.
-
-Output: JSON Payload {"category": "High-Priority"}.
+Output: JSON Payload `{"category": "High-Priority"}`
 
 🧪 Testing & Validation
 
@@ -149,17 +144,17 @@ See docs/Test_Documentation.md for full test scenarios.
 
 🔧 Troubleshooting
 
-CORS Error (Failed to Fetch):
+**CORS Error (Failed to Fetch):**
+- Go to Azure Portal → Search Service → Indexes → CORS
+- Set to "All"
 
-Fix: Go to Azure Portal $\rightarrow$ Search Service $\rightarrow$ Indexes $\rightarrow$ CORS. Set to "All".
+**Error 400 (Field not found):**
+- Ensure `document_classification` exists in the Index Fields
+- Mark it as "Retrievable"
 
-Error 400 (Field not found):
-
-Fix: Ensure document_classification exists in the Index Fields and is marked "Retrievable".
-
-Indexer returns null for classification:
-
-Fix: Check Skillset JSON. Ensure the Python output name (category) matches the Indexer Source Field (/document/category).
+**Indexer returns null for classification:**
+- Check Skillset JSON
+- Ensure Python output name `category` matches Indexer Source Field `/document/category`
 
 📜 License & Copyright
 
