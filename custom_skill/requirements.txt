@@ -1,0 +1,8 @@
+azure-functions
+azure-identity
+azure-storage-blob
+scikit-learn
+pandas
+numpy
+requests
+python-dotenv

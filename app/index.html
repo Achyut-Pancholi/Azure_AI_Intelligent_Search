@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Internal Knowledge Portal</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f0f2f5; color: #333; }
+        .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h1 { color: #0078d4; margin-top: 0; }
+        h3 { color: #444; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; margin-top: 40px; }
+        
+        /* Upload Section */
+        .upload-area { background: #fafafa; padding: 25px; border: 2px dashed #ddd; border-radius: 8px; text-align: center; }
+        .upload-btn { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: 600; }
+        .upload-btn:hover { background: #218838; }
+
+        /* Search Section */
+        .search-box { display: flex; gap: 10px; margin-bottom: 15px; }
+        input[type="text"] { flex-grow: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; }
+        .search-btn { padding: 12px 25px; background: #0078d4; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+
+        /* Quick Actions */
+        .quick-actions { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .chip { background: #e1f0fa; color: #0078d4; padding: 6px 12px; border-radius: 20px; font-size: 0.9em; cursor: pointer; border: 1px solid transparent; }
+        .chip:hover { border-color: #0078d4; background: #d0e8f8; }
+        .chip.active { background: #0078d4; color: white; }
+
+        /* Results */
+        .result-item { background: #fff; border: 1px solid #e0e0e0; padding: 20px; margin-bottom: 15px; border-radius: 8px; border-left: 5px solid #0078d4; }
+        .result-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .result-title { font-weight: 700; font-size: 1.2em; }
+        .result-tag { background: #0078d4; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600; text-transform: uppercase; }
+        .result-tag.urgent { background: #d13438; } 
+        .result-tag.standard { background: #605e5c; }
+        .result-snippet { color: #555; font-size: 0.95em; }
+        
+        .status-msg { margin-top: 10px; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Internal Knowledge Portal</h1>
+    <p style="color:#666; margin-bottom: 30px;">AI-powered document search and classification system.</p>
+
+    <!-- UPLOAD SECTION -->
+    <h3>📂 Upload Document</h3>
+    <div class="upload-area">
+        <input type="file" id="fileInput" style="margin-bottom: 10px;">
+        <br>
+        <button onclick="uploadFile()" class="upload-btn">Upload to Azure Storage</button>
+        <div id="uploadStatus" class="status-msg"></div>
+    </div>
+
+    <!-- SEARCH SECTION -->
+    <h3>🔍 Search Knowledge Base</h3>
+    
+    <!-- Quick Search Examples -->
+    <div class="quick-actions">
+        <span>Filters:</span>
+        <!-- Updated Buttons use Strict Filtering -->
+        <span class="chip" onclick="setFilter('Standard')">Show Standard Only</span>
+        <span class="chip" onclick="setFilter('High-Priority')">Show High-Priority Only</span>
+        <span class="chip" onclick="resetSearch()">Show All</span>
+    </div>
+
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Enter keywords..." onkeypress="handleEnter(event)">
+        <button onclick="searchDocuments()" class="search-btn">Search</button>
+    </div>
+    <div id="results"></div>
+</div>
+
+<script>
+    // ================= CONFIGURATION =================
+   // 1. Search Config
+    const SEARCH_SERVICE_NAME = "search-knowledge-service-01"; 
+    const INDEX_NAME = "knowledge-index";                      
+    const QUERY_KEY = "";             
+
+    // 2. Storage Config (For Uploads)
+    const STORAGE_ACCOUNT_NAME = "searchdata2025"; 
+    const CONTAINER_NAME = "documents";
+    // Generate SAS Token: Portal -> Storage Account -> Shared access signature
+    // Permissions: Write, Create, List.
+    const SAS_TOKEN = ""; 
+    // =========================================================================
+
+    // =================================================
+
+    let currentFilter = null;
+
+    function setFilter(category) {
+        // This sets a STRICT filter
+        currentFilter = `document_classification eq '${category}'`;
+        document.getElementById('searchInput').value = `(Filtering by: ${category})`;
+        searchDocuments();
+    }
+
+    function resetSearch() {
+        currentFilter = null;
+        document.getElementById('searchInput').value = "";
+        searchDocuments();
+    }
+
+    function handleEnter(e) {
+        if(e.key === 'Enter') {
+            currentFilter = null; // Typing manual keywords clears the category filter
+            searchDocuments();
+        }
+    }
+
+    async function searchDocuments() {
+        const query = document.getElementById('searchInput').value;
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = '<p style="color:#666; text-align:center;">Searching...</p>';
+
+        const url = `https://${SEARCH_SERVICE_NAME}.search.windows.net/indexes/${INDEX_NAME}/docs/search?api-version=2023-11-01`;
+
+        // Don't search for the "Filtering by..." text
+        let searchText = query.startsWith("(Filtering") ? "*" : (query || "*");
+
+        const payload = {
+            "search": searchText, 
+            "select": "*", 
+            "top": 10
+        };
+
+        // Apply strict filter if a button was clicked
+        if (currentFilter) {
+            payload["filter"] = currentFilter;
+        }
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'api-key': QUERY_KEY },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) throw new Error(response.statusText);
+            const data = await response.json();
+            displayResults(data.value);
+        } catch (error) {
+            resultsDiv.innerHTML = `<p style="color:red">Search Failed: ${error.message}</p>`;
+        }
+    }
+
+    function displayResults(docs) {
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = '';
+
+        if (!docs || docs.length === 0) {
+            resultsDiv.innerHTML = '<p style="text-align:center; color:#666;">No documents found.</p>';
+            return;
+        }
+
+        docs.forEach(doc => {
+            let snippet = doc.content ? doc.content.substring(0, 300) : "No text content.";
+            let category = doc.document_classification || "Uncategorized";
+            let fileName = doc.metadata_storage_name || "Unknown Document";
+            let tagClass = category.toLowerCase().includes("high") ? "result-tag urgent" : "result-tag standard";
+
+            const div = document.createElement('div');
+            div.className = 'result-item';
+            div.innerHTML = `
+                <div class="result-header">
+                    <div class="result-title">📄 ${fileName}</div>
+                    <div class="${tagClass}">${category}</div>
+                </div>
+                <div class="result-snippet">${snippet}...</div>
+            `;
+            resultsDiv.appendChild(div);
+        });
+    }
+
+    async function uploadFile() {
+        // ... (Same upload logic as before) ...
+        // I've kept the upload logic shorter here to save space, 
+        // but ensure you copy the FULL upload function from the previous step if needed!
+        const fileInput = document.getElementById('fileInput');
+        const statusDiv = document.getElementById('uploadStatus');
+        const file = fileInput.files[0];
+        if (!file) { statusDiv.innerHTML = 'Please select a file.'; return; }
+        
+        let token = SAS_TOKEN.startsWith('?') ? SAS_TOKEN : '?' + SAS_TOKEN;
+        const blobUrl = `https://${STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${CONTAINER_NAME}/${file.name}${token}`;
+        
+        try {
+            const res = await fetch(blobUrl, { 
+                method: 'PUT', 
+                headers: { 'x-ms-blob-type': 'BlockBlob', 'Content-Type': file.type }, 
+                body: file 
+            });
+            if (res.ok) statusDiv.innerHTML = '<span style="color:green">✅ Upload Successful!</span>';
+            else throw new Error(res.statusText);
+        } catch (e) { statusDiv.innerHTML = `<span style="color:red">❌ Failed: ${e.message}</span>`; }
+    }
+</script>
+
+</body>
+</html>
