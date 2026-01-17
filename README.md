@@ -1,34 +1,42 @@
-Intelligent Search Application with Azure AI Search 🔍
+# 🔍 Intelligent Search Application with Azure AI Search
 
-Industry Project Submission | Company: Tata Consultancy Services (TCS)
+> **Industry Project Submission** | *Company:* **Tata Consultancy Services (TCS)**
 
-📖 Project Overview
+[![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python)](https://www.python.org/)
+[![Azure](https://img.shields.io/badge/Azure-AI%20Search-0078D4?logo=microsoft-azure)](https://azure.microsoft.com/)
+[![License](https://img.shields.io/badge/License-TCS%202025-green)]()
 
-This project is an AI-powered Intelligent Search Portal designed to solve the challenge of retrieving and classifying unstructured documents in large organizations.
+---
 
-Unlike traditional keyword search, this application utilizes an Azure AI Enrichment Pipeline. It ingests documents, extracts text via OCR, and uses a Custom Machine Learning Skill (Python) to automatically classify documents based on their content urgency (e.g., distinguishing "High-Priority" contracts from "Standard" reports).
+## 📖 Project Overview
 
-🏗️ Architecture
+An **AI-powered Intelligent Search Portal** that solves the challenge of retrieving and classifying unstructured documents in large organizations.
 
-The solution follows a Cloud-Native Microservices architecture:
+Unlike traditional keyword search, this application harnesses an **Azure AI Enrichment Pipeline** to:
+- 📄 Ingest documents from multiple formats (PDF, DOCX)
+- 🔤 Extract text via OCR for image-based content
+- 🤖 Automatically classify documents by urgency using a **Custom ML Skill** (Python)
+- ⚡ Distinguish between "High-Priority" contracts and "Standard" reports
 
-Ingestion: User uploads PDF/DOCX to Azure Blob Storage.
+---
 
-Trigger: Azure Search Indexer detects the new file.
+## 🏗️ Architecture
 
-Enrichment:
+The solution follows a **Cloud-Native Microservices** architecture:
 
-OCR: Extracts text from images/PDFs.
+| Component | Function |
+|-----------|----------|
+| **Ingestion** | User uploads PDF/DOCX to Azure Blob Storage |
+| **Trigger** | Azure Search Indexer detects new files |
+| **OCR** | Extracts text from images and PDFs |
+| **Custom Skill** | Sends text to Azure Functions (Python) for analysis |
+| **Intelligence** | Python function analyzes text for keywords and assigns classification |
+| **Indexing** | Data stored in Azure AI Search Index |
+| **Retrieval** | HTML/JS Frontend queries index via REST API |
 
-Custom Skill: Sends text to Azure Functions (Python).
+---
 
-Intelligence: The Python function analyzes text for keywords (urgent, deadline) and assigns a classification tag.
-
-Indexing: Data is stored in an Azure AI Search Index.
-
-Retrieval: A decoupled HTML/JS Frontend queries the index via REST API.
-
-📂 Repository Structure
+## 📂 Repository Structure
 
 ```
 TCS_Industry_Project/
@@ -44,118 +52,221 @@ TCS_Industry_Project/
 └── README.md                         # Project Documentation
 ```
 
+---
 
-🚀 Getting Started
+## 🚀 Getting Started
 
-Prerequisites
+### Prerequisites
 
-Active Azure Subscription.
+| Requirement | Details |
+|------------|---------|
+| **Azure Subscription** | Active Azure account with available quota |
+| **VS Code** | With [Azure Tools Extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.vscode-node-azure-pack) |
+| **Python** | Version 3.10 or higher installed locally |
+| **Git** | For version control |
 
-VS Code with Azure Tools Extension.
+### Installation Steps
 
-Python 3.10 installed locally.
+#### **Step 1: Backend Deployment (Azure Functions)**
 
-Step 1: Backend Deployment (Azure Functions)
+```bash
+# Navigate to the custom skill directory
+cd custom_skill/
 
-Navigate to the custom_skill/ folder.
+# Install dependencies
+pip install -r requirements.txt
 
-Deploy the code to an Azure Function App (Python Consumption Plan).
+# Deploy to Azure Function App
+# Use Azure CLI: az functionapp deployment source config-zip ...
+# Or use VS Code Azure Functions extension
+```
 
-Copy the Function URL and Host Key.
+**Important:** Copy your Function URL and Host Key after deployment.
 
-Step 2: Search Configuration (Azure Portal)
+---
 
-Create an Azure AI Search Service.
+#### **Step 2: Search Configuration (Azure Portal)**
 
-Use the "Import Data" wizard to connect to your Blob Storage.
+1. Create an **Azure AI Search Service** in Azure Portal
+2. Use the **"Import Data"** wizard to connect your Blob Storage
+3. Add the **Custom Skill** to your Skillset JSON:
 
-Crucial: Add the Custom Skill to your Skillset JSON:
-
+```json
 {
   "@odata.type": "#Microsoft.Skills.Custom.WebApiSkill",
   "uri": "<YOUR_FUNCTION_URL>",
   "inputs": [{ "name": "text", "source": "/document/merged_content" }],
   "outputs": [{ "name": "category", "targetName": "category" }]
 }
+```
 
+4. Map the output `/document/category` to a new index field `document_classification`
 
-Map the output /document/category to a new index field document_classification.
+---
 
-Step 3: Frontend Configuration
+#### **Step 3: Frontend Configuration**
 
-Open app/index.html.
+1. Open `app/index.html`
+2. Update the **Configuration Section** at the bottom of the script:
 
-Update the Configuration Section at the bottom of the script:
-
+```javascript
 const SEARCH_SERVICE_NAME = "your-service-name";
 const INDEX_NAME = "your-index-name";
-const QUERY_KEY = "your-query-key"; // Use a Query Key, NOT Admin Key!
+const QUERY_KEY = "your-query-key";  // Use Query Key, NOT Admin Key!
+```
 
+---
 
-🧠 ML Model Logic
+## 🧠 ML Model Logic
 
-The custom skill (ClassifySkill) implements a rule-based logic to satisfy the project requirement for an "Optimized ML Model."
+The **ClassifySkill** implements intelligent rule-based classification:
 
-Input: Raw text from PDF.
+### **Classification Algorithm**
 
-Logic:
+### **Classification Algorithm**
 
-- If text contains "urgent" OR "deadline" → Tag as **High-Priority**
-- If text contains "archive" → Tag as **Archived**
-- Otherwise → Tag as **Standard**
+| Condition | Output Classification |
+|-----------|----------------------|
+| Text contains **"urgent"** OR **"deadline"** | 🔴 **High-Priority** |
+| Text contains **"archive"** | 📦 **Archived** |
+| Otherwise (default) | 📋 **Standard** |
 
-Output: JSON Payload `{"category": "High-Priority"}`
+**Example Output:**
+```json
+{
+  "category": "High-Priority"
+}
+```
 
-🧪 Testing & Validation
+---
 
-Test Case
+## 🧪 Testing & Validation
 
-Input Data
+| Test Case | Input | Expected Result | Status |
+|-----------|-------|-----------------|--------|
+| **TC-01** | PDF with text "Standard Job Description" | Classification: `Standard` | ✅ Pass |
+| **TC-02** | PDF with text "Urgent deadline required" | Classification: `High-Priority` | ✅ Pass |
+| **TC-03** | Search Query "Engineering" | Returns relevant documents | ✅ Pass |
 
-Expected Result
+> 📌 Full test scenarios available in [docs/Test_Documentation.md](docs/Test_Documentation.md)
 
-Status
+---
 
-TC-01
+## 🔧 Troubleshooting
 
-PDF with text "Standard Job Description"
+### **❌ CORS Error (Failed to Fetch)**
+```
+Solution:
+1. Go to Azure Portal → Search Service → Indexes
+2. Find your index → CORS settings
+3. Set CORS to "Allow all origins"
+```
 
-Tag: Standard
+### **❌ Error 400 (Field not found)**
+```
+Solution:
+1. Verify document_classification field exists in Index Fields
+2. Ensure it's marked as "Retrievable"
+3. Sync the skillset to regenerate the index
+```
 
-✅ Pass
+### **❌ Indexer returns null for classification**
+```
+Solution:
+1. Verify Skillset JSON configuration
+2. Check Python output name matches: category → /document/category
+3. Ensure Function URL and Host Key are correct
+4. Review Azure Function logs for errors
+```
 
-TC-02
+---
 
-PDF with text "Urgent deadline required"
+## 📊 Key Features
 
-Tag: High-Priority
+- ✅ **Automatic OCR Processing** - Extracts text from images and scanned documents
+- ✅ **Intelligent Classification** - Rule-based ML model for document urgency assessment
+- ✅ **Scalable Architecture** - Built on Azure Functions (serverless, auto-scaling)
+- ✅ **Full-Text Search** - Azure AI Search with semantic capabilities
+- ✅ **REST API Integration** - Easy integration with external systems
+- ✅ **Web Portal** - User-friendly search interface
 
-✅ Pass
+---
 
-TC-03
+## 💡 How It Works
 
-Search Query "Engineering"
+```
+User Upload (PDF/DOCX)
+        ↓
+Blob Storage Detection
+        ↓
+Indexer Trigger
+        ↓
+OCR Processing
+        ↓
+Custom Python Skill (Classification)
+        ↓
+Indexed in Azure Search
+        ↓
+Frontend Query & Display Results
+```
 
-Returns relevant docs
+---
 
-✅ Pass
+---
 
-See docs/Test_Documentation.md for full test scenarios.
+## 📝 Configuration Details
 
-🔧 Troubleshooting
+### **Environment Variables** (in `host.json`)
+```json
+{
+  "version": "2.0",
+  "logging": {
+    "applicationInsights": {
+      "samplingSettings": {
+        "isEnabled": true,
+        "maxTelemetryItemsPerSecond": 20
+      }
+    }
+  },
+  "functionTimeout": "00:05:00"
+}
+```
 
-**CORS Error (Failed to Fetch):**
-- Go to Azure Portal → Search Service → Indexes → CORS
-- Set to "All"
+### **Dependencies** (in `requirements.txt`)
+```
+azure-functions
+requests
+numpy
+scikit-learn
+```
 
-**Error 400 (Field not found):**
-- Ensure `document_classification` exists in the Index Fields
-- Mark it as "Retrievable"
+---
 
-**Indexer returns null for classification:**
-- Check Skillset JSON
-- Ensure Python output name `category` matches Indexer Source Field `/document/category`
+## 🤝 Contributing
 
-📜 License & Copyright
+This is a **TCS Industry Project** submission. For contributions or questions:
+1. Review the [Test Documentation](docs/Test_Documentation.md)
+2. Follow Azure best practices for function development
+3. Test locally before deploying
 
-Copyright © 2025. Created as part of the TCS Industry Project.
+---
+
+## 📜 License & Copyright
+
+Created as part of the TCS Industry Project
+```
+
+---
+
+## 📞 Support & Resources
+
+| Resource | Link |
+|----------|------|
+| **Azure AI Search Docs** | [Microsoft Learn](https://learn.microsoft.com/en-us/azure/search/) |
+| **Azure Functions** | [Getting Started](https://learn.microsoft.com/en-us/azure/azure-functions/) |
+| **Python SDK** | [azure-search-documents](https://pypi.org/project/azure-search-documents/) |
+
+---
+
+**Last Updated:** January 17, 2026  
+**Project Status:** ✅ Active
